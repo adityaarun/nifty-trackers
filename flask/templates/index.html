@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flask Project</title>
+</head>
+
+<style>
+    body {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        background-color: #f4f4f4;
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+
+    h1 {
+        text-align: center;
+        color: #333;
+    }
+
+    form {
+        max-width: 400px;
+        margin: 20px auto;
+        background-color: #fff;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    }
+
+    label {
+        display: block;
+        margin-bottom: 8px;
+        color: #555;
+    }
+
+    input, select {
+        width: 100%;
+        padding: 10px;
+        margin-bottom: 16px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        box-sizing: border-box;
+    }
+
+    button {
+        width: 100%;
+        padding: 12px;
+        background-color: #4CAF50;
+        color: #fff;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 16px;
+    }
+
+    button:hover {
+        background-color: #45a049;
+    }
+
+    p {
+        text-align: center;
+        margin-top: 20px;
+        color: #4CAF50;
+    }
+</style>
+
+<body>
+    <form action="{{ url_for('predict') }}" method="post">
+        <label for="stock">Select Stock:</label>
+        <select name="stock" required>
+            {% for stock in stock_lst %}
+                <option value="{{ stock }}">{{ stock }}</option>
+            {% endfor %}
+        </select><br><br>
+        <label for="date">Date:</label>
+        <input type="date" name="date" required><br><br>
+        <label for="open">Open:</label>
+        <input type="number" name="open" required><br><br>
+        <label for="high">High:</label>
+        <input type="number" name="high" required><br><br>
+        <label for="low">Low:</label>
+        <input type="number" name="low" required><br><br>
+        <label for="volume">Volume:</label>
+        <input type="number" name="volume" required><br><br>
+        <label for="change">Change:</label>
+        <input type="number" name="change" required><br><br>
+        <label for="day_volatility">Day Volatility:</label>
+        <input type="number" name="day_volatility" required><br><br>
+        <label for="daily_volatility">Daily Volatility:</label>
+        <input type="number" name="daily_volatility" required><br><br>
+        <label for="weeklyMA">Weekly Moving Average:</label>
+        <input type="number" name="weeklyMA" required><br><br>
+        <br><br>
+        <button type="submit">Submit</button>
+    </form>
+</body>
+</html>

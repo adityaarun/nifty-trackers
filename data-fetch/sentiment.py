@@ -121,8 +121,10 @@ spark = SparkSession.builder.appName("SentimentAnalysis").getOrCreate()
 spark.conf.set("spark.sql.legacy.timeParserPolicy", "LEGACY")
 
 stocks = get_nifty50_stock_list()
-start_date_str = '2020-01-01'
-end_date_str = '2023-12-08'
+
+today = datetime.today()
+start_date_str = (today - timedelta(days = 2)).strftime("%Y-%m-%d")
+end_date_str = (today - timedelta(days = 1)).strftime("%Y-%m-%d")
 
 for stock in stocks:
     process_sentiment_analysis(spark, news_actual, start_date_str, end_date_str, stock)

@@ -49,7 +49,7 @@ def get_stock_data(stock, start=None, end=None):
         return None
 
 today = datetime.today()
-start_date = (today - timedelta(days = 3650)).strftime("%Y-%m-%d")
+start_date = (today - timedelta(days = 2)).strftime("%Y-%m-%d")
 end_date = (today - timedelta(days = 1)).strftime("%Y-%m-%d")
 
 stocks_list = ["NIFTY"]

@@ -34,8 +34,6 @@ def extract_value(summary, exchange):
         return float(value_str)
     return None
 
-
-# Define a UDF to extract the company name
 def extract_company_name(title):
     # Assuming the company name is at the beginning of the title
     match = re.match(r"([^\d\W]+)", title)
@@ -43,9 +41,7 @@ def extract_company_name(title):
         return match.group(1)
     return None
 
-
-# Define a UDF (User Defined Function) for sentiment analysis
-def analyze_sentiment(title,sia):
+def analyze_sentiment(title, sia):
     sentiment_score = sia.polarity_scores(title)
     compound_score = sentiment_score['compound']
 
@@ -57,8 +53,6 @@ def analyze_sentiment(title,sia):
     else:
         return 0
 
-
-# Function to get Nifty50 stock list
 def get_nifty50_stock_list():
     url = "https://archives.nseindia.com/content/indices/ind_nifty50list.csv"
     
@@ -74,7 +68,6 @@ def get_nifty50_stock_list():
         print(f"Error: {e}")
         return None
 
-# Function to get the NewsFeed Entries
 def get_news_feed_for_stock(ticker):
     dfs = []
 
@@ -119,7 +112,6 @@ def process_sentiment_analysis(spark, db_collection, start_date, end_date, ticke
         json_data = json.loads(pandas_df.to_json(orient='records'))
         if len(json_data) > 0:
             db_collection.insert_many(json_data)
-
 
 client = MongoClient('localhost', 27017)
 stocks_db = client['iisc']

@@ -25,9 +25,12 @@ def train_nifty(start, end):
     stocks_data = spark.read.format("mongodb").option("spark.mongodb.read.database", 'iisc').option("spark.mongodb.read.collection", 'stock-actual').option("spark.mongodb.write.connection.uri","mongodb://localhost:27017").load()
     index_data = spark.read.format("mongodb").option("spark.mongodb.read.database", 'iisc').option("spark.mongodb.read.collection", 'index-actual').option("spark.mongodb.write.connection.uri","mongodb://localhost:27017").load()
     commodities_data = spark.read.format("mongodb").option("spark.mongodb.read.database", 'iisc').option("spark.mongodb.read.collection", 'commodity-actual').option("spark.mongodb.write.connection.uri","mongodb://localhost:27017").load()
+    
     start_timestamp = int(datetime.strptime(start,"%Y-%m-%d").timestamp()) * 1000
     end_timestamp = int(datetime.strptime(end,"%Y-%m-%d").timestamp()) * 1000
+    
     stocks_data = stocks_data.filter((F.col('Date') >= start_timestamp) & (F.col('Date') <= end_timestamp))
+    
     # Window function to get the previous day price of stock
     w = Window.partitionBy("Symbol").orderBy("Date")
     
@@ -48,23 +51,28 @@ def train_nifty(start, end):
 
     # Drop any rows with NA values (which might have been introduced due to lagging operations)
     stocks_data = stocks_data.fillna(0).select("Date", "Symbol", "Close")
+    commodities_data = commodities_data.fillna(0).select("Date", "Symbol", "Close")
 
-    stocks_data.show()
     symbols = [list(x.asDict().values())[0] for x in stocks_data.select("Symbol").distinct().collect()]
     dfArray = [stocks_data.where(stocks_data.Symbol == x).withColumn(x + "_Close", stocks_data.Close).drop("Symbol", "Close") for x in symbols]
     
     for df in dfArray:
         index_data = index_data.join(df, index_data.Date == df.Date, "left").select(index_data["*"], df[df.columns[1]])
 
+    symbols = [list(x.asDict().values())[0] for x in commodities_data.select("Symbol").distinct().collect()]
+    dfArray = [commodities_data.where(commodities_data.Symbol == x).withColumn(x + "_Close", commodities_data.Close).drop("Symbol", "Close") for x in symbols]
+
+    for df in dfArray:
+        index_data = index_data.join(df, index_data.Date == df.Date, "left").select(index_data["*"], df[df.columns[1]])
+    
     index_data = index_data.fillna(0)
     
     feature_list = index_data.columns
     feature_list.remove("Close")
     feature_list.remove("_id")
     feature_list.remove("Symbol")
-    logging.warn(feature_list)
     
-    train_data, test_data = index_data.randomSplit([0.75,0.25], seed = 42)
+    train_data, test_data = index_data.randomSplit([0.80, 0.20], seed = 42)
     stage_1 = VectorAssembler(inputCols=feature_list, outputCol="features")
     model = GBTRegressor(labelCol='Close', featuresCol="features", maxIter=50)
     # model = LinearRegression(featuresCol = 'features', labelCol = 'Close')
@@ -144,7 +152,7 @@ def train(stock, start, end):
     else:
         df = df.withColumn("Sentiment", F.lit(0))
 
-    train_data, test_data = df.randomSplit([0.75,0.25], seed = 42)
+    train_data, test_data = df.randomSplit([0.80,0.20], seed = 42)
 
     #Code for feature assemble
     feature_list = ['Open', 'High', 'Low', 'Volume', "change", "day_volatility", "daily_volatility", "weeklyMA", "Sentiment"]
@@ -203,3 +211,41 @@ def prediction(stock, date, open, high, low, volume, change, day_volatility, dai
     spark.stop()
 
     return preds
+
+def comparison(stock1, stock2, start, end):
+    # Start Spark session
+    spark = SparkSession.builder.appName("StockMarketPrediction") \
+    .config("spark.jars.packages", "org.mongodb.spark:mongo-spark-connector_2.12:10.2.1") \
+    .getOrCreate()
+    
+    stocks_data = spark.read.format("mongodb").option("spark.mongodb.read.database", 'iisc').option("spark.mongodb.read.collection", 'stock-actual').option("spark.mongodb.write.connection.uri","mongodb://localhost:27017").load()
+    index_data = spark.read.format("mongodb").option("spark.mongodb.read.database", 'iisc').option("spark.mongodb.read.collection", 'index-actual').option("spark.mongodb.write.connection.uri","mongodb://localhost:27017").load()
+    commodities_data = spark.read.format("mongodb").option("spark.mongodb.read.database", 'iisc').option("spark.mongodb.read.collection", 'commodity-actual').option("spark.mongodb.write.connection.uri","mongodb://localhost:27017").load()
+
+    if stock1 == stock2:
+        return "Can't compare same entitiy"
+
+    start_timestamp = int(datetime.strptime(start,"%Y-%m-%d").timestamp()) * 1000
+    end_timestamp = int(datetime.strptime(end,"%Y-%m-%d").timestamp()) * 1000
+
+    if stock1 in ['NIFTY']:
+        stock1_data = index_data.filter((F.col('Date') >= start_timestamp) & (F.col('Date') <= end_timestamp))
+    elif stock1 in ['CRUD', 'GOLD']:
+        stock1_data = commodities_data.filter((F.col("Symbol") == stock1) & (F.col('Date') >= start_timestamp) & (F.col('Date') <= end_timestamp))
+    else:
+        stock1_data = stocks_data.filter((F.col("Symbol") == stock1) & (F.col('Date') >= start_timestamp) & (F.col('Date') <= end_timestamp))
+    
+    if stock2 in ['NIFTY']:
+        stock2_data = index_data.filter((F.col('Date') >= start_timestamp) & (F.col('Date') <= end_timestamp))
+    elif stock2 in ['CRUD', 'GOLD']:
+        stock2_data = commodities_data.filter((F.col("Symbol") == stock2) & (F.col('Date') >= start_timestamp) & (F.col('Date') <= end_timestamp))
+    else:
+        stock2_data = stocks_data.filter((F.col("Symbol") == stock2) & (F.col('Date') >= start_timestamp) & (F.col('Date') <= end_timestamp))
+
+    stock1_data = stock1_data.select("Date", "Close").withColumn("CloseStock1", stock1_data['Close']).drop("Close")
+    stock2_data = stock2_data.select("Date", "Close").withColumn("CloseStock2", stock2_data['Close']).drop("Close")
+    logging.warn(stock2_data[stock2_data.columns[1]])
+    join_data = stock1_data.join(stock2_data, stock1_data.Date == stock2_data.Date, "left").select(stock1_data["*"], stock2_data[stock2_data.columns[1]])
+    comparison_data = join_data.withColumn('Date', F.from_unixtime(F.col('Date') / 1000, "yyyy-MM-dd HH:mm:ss")).toPandas()
+
+    return stock1, stock2, comparison_data

@@ -7,7 +7,7 @@ from pyspark.ml.feature import VectorAssembler
 from pyspark.ml.evaluation import RegressionEvaluator
 from pyspark.ml.regression import LinearRegression
 from pyspark.ml.pipeline import PipelineModel
-
+from lib import Prediction as pred
 import matplotlib.pyplot as plt
 import yfinance as yf
 import pandas as pd
@@ -35,11 +35,20 @@ query.printSchema()
 
 logging.warn("Query is streaming: {}".format(query.isStreaming))
 
+def process_batch(df, epoch):
+    symbols = [list(x.asDict().values())[0] for x in df.select("Symbol").distinct().collect()]
+    logging.warn(symbols)
+    if len(symbols) > 0:
+        for symbol in symbols:
+            pred.train(spark, symbol)
+    logging.warn(epoch)
+
 query2 = (
     query.writeStream \
         .outputMode("append") \
         .option("forceDeleteTempCheckpointLocation", "true") \
         .format("console") \
-        .trigger(continuous="1 second")
+        # .trigger(continuous="10 second")
+        .foreachBatch(process_batch)
         .start().awaitTermination()
 )

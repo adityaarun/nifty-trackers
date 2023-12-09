@@ -110,5 +110,48 @@ def predict():
     # Pass the base64-encoded image to the HTML template
     return render_template('prediction.html', predictions=predictions["prediction"].values[0])
 
+@app.route('/compare', methods=['GET', 'POST'])
+def compare():
+    if request.method == 'GET':
+        stock_lst = lib.get_nifty50_stock_list()
+        stock_list = stock_lst + ['NIFTY', 'CRUD']
+        return render_template('compare.html', stock_lst=stock_list)
+    
+    stock1 = request.form['stock1']
+    stock2 = request.form['stock2']
+    start_date = request.form['start_date']
+    end_date = request.form['end_date']
+
+    stock1, stock2, compare_data =  pred.comparison(stock1, stock2, start_date, end_date)
+
+    fig, ax1 = plt.subplots(figsize=(15, 6))
+    color = 'tab:red'
+    ax1.set_xlabel('Date')
+    ax1.tick_params(axis = 'x', labelrotation=60)
+    ax1.set_ylabel('Close', color=color)
+    ax1.plot(compare_data["Date"], compare_data["CloseStock1"], color=color, label=stock1)
+    ax1.tick_params(axis='y', labelcolor=color)
+
+    ax2 = ax1.twinx()  # instantiate a second axes that shares the same x-axis
+
+    color = 'tab:blue'
+    ax2.set_ylabel('Close', color=color)  # we already handled the x-label with ax1
+    ax2.plot(compare_data["Date"], compare_data["CloseStock2"], color=color, label=stock2)
+    ax2.tick_params(axis='y', labelcolor=color)
+    
+    plt.title('{} vs {} Closing Prices'.format(stock1, stock2))
+    plt.legend()
+    
+    img = BytesIO()
+    plt.savefig(img, format='png')
+    img.seek(0)
+    plt.close()
+
+    # Encode the plot image to base64
+    img_base64 = base64.b64encode(img.getvalue()).decode('utf-8')
+
+    # Pass the base64-encoded image to the HTML template
+    return render_template('train_output.html', img_base64=img_base64)
+
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port='8000')

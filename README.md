@@ -47,20 +47,20 @@ sudo systemctl restart mongod.service
 
 ## Setup crons for pulling data
 ```
-0 10 * * * /usr/bin/python3 /data_engineering/data-fetch/get_nifty_50.py
-0 8 * * * /usr/bin/python3 /data_engineering/data-fetch/get_commodities.py
-0 6 * * * /usr/bin/python3 /data_engineering/data-fetch/get_nifty.py
-0 4 * * * /usr/bin/python3 /data_engineering/data-fetch/sentiment.py
+0 10 * * * /usr/bin/python3 /nifty_trackers/data-fetch/get_nifty_50.py
+0 8 * * * /usr/bin/python3 /nifty_trackers/data-fetch/get_commodities.py
+0 6 * * * /usr/bin/python3 /nifty_trackers/data-fetch/get_nifty.py
+0 4 * * * /usr/bin/python3 /nifty_trackers/data-fetch/sentiment.py
 ```
 
 ## Start the streamer
 ```
-cd /data_engineering/model-trainer
+cd /nifty_trackers/model-trainer
 python3 streamer.py
 ```
 
 ## Start the flask app
 ```
-cd /data_engineering/flask
+cd /nifty_trackers/flask
 python3 app.py
 ```
